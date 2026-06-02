@@ -15,6 +15,9 @@ class SettingsPanel extends StatefulWidget {
   final ValueChanged<double> onAudioDelayChanged;
   final ValueChanged<double> onVolumeChanged;
   final VoidCallback onClose;
+  final List<SubtitleTrack> subtitleTracks;
+  final SubtitleTrack? currentSubtitleTrack;
+  final ValueChanged<SubtitleTrack> onSubtitleTrackChanged;
 
   const SettingsPanel({
     super.key,
@@ -31,6 +34,9 @@ class SettingsPanel extends StatefulWidget {
     required this.onAudioDelayChanged,
     required this.onVolumeChanged,
     required this.onClose,
+    required this.subtitleTracks,
+    required this.currentSubtitleTrack,
+    required this.onSubtitleTrackChanged,
   });
 
   @override
@@ -79,6 +85,29 @@ class _SettingsPanelState extends State<SettingsPanel>
   }
 
   @override
+  void didUpdateWidget(SettingsPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.volume != widget.volume) {
+      setState(() {
+        _localVolume = widget.volume;
+        _volumeController.text = widget.volume.toInt().toString();
+      });
+    }
+    if (oldWidget.subtitleDelay != widget.subtitleDelay) {
+      setState(() {
+        _localSubDelay = widget.subtitleDelay;
+        _subDelayController.text = widget.subtitleDelay.toStringAsFixed(1);
+      });
+    }
+    if (oldWidget.audioDelay != widget.audioDelay) {
+      setState(() {
+        _localAudioDelay = widget.audioDelay;
+        _audioDelayController.text = widget.audioDelay.toStringAsFixed(1);
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _animController.dispose();
     _subDelayController.dispose();
@@ -106,7 +135,7 @@ class _SettingsPanelState extends State<SettingsPanel>
   }
 
   void _updateVolume(double value) {
-    final clamped = value.clamp(0.0, 200.0);
+    final clamped = value.clamp(100.0, 200.0);
     setState(() {
       _localVolume = clamped;
       _volumeController.text = clamped.toInt().toString();
@@ -244,9 +273,9 @@ class _SettingsPanelState extends State<SettingsPanel>
             children: [
               Row(
                 children: [
-                  Text(
-                    'Volume',
-                    style: const TextStyle(
+                  const Text(
+                    'Boost',
+                    style: TextStyle(
                         color: Colors.white60,
                         fontSize: 13,
                         fontWeight: FontWeight.w400),
@@ -276,38 +305,32 @@ class _SettingsPanelState extends State<SettingsPanel>
                   overlayColor: Colors.white12,
                 ),
                 child: Slider(
-                  value: _localVolume.clamp(0, 200),
-                  min: 0,
+                  value: _localVolume.clamp(100.0, 200.0),
+                  min: 100,
                   max: 200,
-                  divisions: 200,
+                  divisions: 100,
                   onChanged: _updateVolume,
                 ),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: const [
-                  Text('0%',
-                      style:
-                          TextStyle(color: Colors.white24, fontSize: 10)),
-                  Text('100%',
-                      style:
-                          TextStyle(color: Colors.white24, fontSize: 10)),
-                  Text('200%',
-                      style:
-                          TextStyle(color: Colors.white24, fontSize: 10)),
+                  Text('100%', style: TextStyle(color: Colors.white24, fontSize: 10)),
+                  Text('150%', style: TextStyle(color: Colors.white24, fontSize: 10)),
+                  Text('200%', style: TextStyle(color: Colors.white24, fontSize: 10)),
                 ],
               ),
               const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _quickButton('50%', () => _updateVolume(50)),
+                  _quickButton('Off', () => _updateVolume(100)),
                   const SizedBox(width: 6),
-                  _quickButton('100%', () => _updateVolume(100)),
+                  _quickButton('+25%', () => _updateVolume(125)),
                   const SizedBox(width: 6),
-                  _quickButton('150%', () => _updateVolume(150)),
+                  _quickButton('+50%', () => _updateVolume(150)),
                   const SizedBox(width: 6),
-                  _quickButton('200%', () => _updateVolume(200)),
+                  _quickButton('Max', () => _updateVolume(200)),
                 ],
               ),
             ],
@@ -405,6 +428,25 @@ class _SettingsPanelState extends State<SettingsPanel>
       children: [
         _sectionHeader('SUBTITLES'),
         const SizedBox(height: 12),
+        if (widget.subtitleTracks.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            child: Text('No subtitle tracks',
+                style: TextStyle(color: Colors.white24, fontSize: 13)),
+          )
+        else
+          ...widget.subtitleTracks.map((track) {
+            final isSelected = widget.currentSubtitleTrack?.id == track.id;
+            return _TrackItem(
+              label: track.title ?? track.language ?? 'Track ${track.id}',
+              selected: isSelected,
+              onTap: () => widget.onSubtitleTrackChanged(track),
+            );
+          }),
+        
+        const SizedBox(height: 16),
+        _sectionHeader('VISIBILITY'),
+        const SizedBox(height: 12),
 
         _settingRow(
           label: 'Enabled',
@@ -489,15 +531,9 @@ class _SettingsPanelState extends State<SettingsPanel>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: const [
-                  Text('-30s',
-                      style:
-                          TextStyle(color: Colors.white24, fontSize: 10)),
-                  Text('0',
-                      style:
-                          TextStyle(color: Colors.white24, fontSize: 10)),
-                  Text('+30s',
-                      style:
-                          TextStyle(color: Colors.white24, fontSize: 10)),
+                  Text('Off', style: TextStyle(color: Colors.white24, fontSize: 10)),
+                  Text('+50%', style: TextStyle(color: Colors.white24, fontSize: 10)),
+                  Text('+100%', style: TextStyle(color: Colors.white24, fontSize: 10)),
                 ],
               ),
               const SizedBox(height: 8),

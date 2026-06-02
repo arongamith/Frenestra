@@ -44,6 +44,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
   double _audioDelay = 0.0;
   List<AudioTrack> _audioTracks = [];
   AudioTrack? _currentAudioTrack;
+  List<SubtitleTrack> _subtitleTracks = [];
+  SubtitleTrack? _currentSubtitleTrack;
+  double _volumeBoost = 100.0; // 100 = no boost, 200 = max boost
 
   Widget _controlButton(IconData icon, VoidCallback onTap,
       {double size = 22, Color color = Colors.white70}) {
@@ -70,10 +73,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _player.stream.tracks.listen((tracks) {
       setState(() {
         _audioTracks = tracks.audio;
+        _subtitleTracks = tracks.subtitle;
       });
     });
     _player.stream.track.listen((track) {
-      setState(() => _currentAudioTrack = track.audio);
+      setState(() {
+        _currentAudioTrack = track.audio;
+        _currentSubtitleTrack = track.subtitle;
+      });
     });
   }
 
@@ -97,6 +104,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
     setState(() => _audioDelay = value);
     (_player.platform as NativePlayer)
         .setProperty('audio-delay', value.toStringAsFixed(1));
+  }
+
+  void _applyVolume() {
+    final effective = _isMuted ? 0.0 : (_volume * _volumeBoost / 100).clamp(0.0, 200.0);
+    _player.setVolume(effective);
   }
 
   Future<void> _openFile() async {
@@ -187,7 +199,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   void _toggleMute() {
     _isMuted = !_isMuted;
-    _player.setVolume(_isMuted ? 0 : _volume);
+    _applyVolume();
     setState(() {});
     _showOSD(_isMuted ? 'Muted' : 'Unmuted');
   }
@@ -217,21 +229,21 @@ class _PlayerScreenState extends State<PlayerScreen> {
         _showOSD('◀◀ 5s');
         return KeyEventResult.handled;
 
-      case LogicalKeyboardKey.arrowUp:
-        final newVol = (_volume + 10).clamp(0, 100).toDouble();
-        setState(() => _volume = newVol);
-        _player.setVolume(newVol);
-        _showOSD('Volume ${newVol.toInt()}%');
-        _showControls();
-        return KeyEventResult.handled;
-
-      case LogicalKeyboardKey.arrowDown:
-        final newVol = (_volume - 10).clamp(0, 100).toDouble();
-        setState(() => _volume = newVol);
-        _player.setVolume(newVol);
-        _showOSD('Volume ${newVol.toInt()}%');
-        _showControls();
-        return KeyEventResult.handled;
+        case LogicalKeyboardKey.arrowUp:
+          final newVol = (_volume + 10).clamp(0.0, 100.0);
+          setState(() => _volume = newVol);
+          _applyVolume();
+          _showOSD('Volume ${newVol.toInt()}%');
+          _showControls();
+          return KeyEventResult.handled;
+        
+        case LogicalKeyboardKey.arrowDown:
+          final newVol = (_volume - 10).clamp(0.0, 100.0);
+          setState(() => _volume = newVol);
+          _applyVolume();
+          _showOSD('Volume ${newVol.toInt()}%');
+          _showControls();
+          return KeyEventResult.handled;
 
       case LogicalKeyboardKey.keyF:
         _toggleFullscreen();
@@ -405,6 +417,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         _loadSubtitle();
                         setState(() => _settingsPanelOpen = false);
                       },
+                      subtitleTracks: _subtitleTracks,
+                      currentSubtitleTrack: _currentSubtitleTrack,
+                      onSubtitleTrackChanged: (track) {
+                        _player.setSubtitleTrack(track);
+                        setState(() => _currentSubtitleTrack = track);
+                      },
                       onSubtitleDelayChanged: _adjustSubtitleDelay,
                       onSubtitlesToggled: (value) {
                         setState(() => _subtitlesEnabled = value);
@@ -417,7 +435,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         }
                       },
                       audioDelay: _audioDelay,
-                      volume: _volume,
+                      volume: _volumeBoost,
                       audioTracks: _audioTracks,
                       currentAudioTrack: _currentAudioTrack,
                       onAudioTrackChanged: (track) {
@@ -426,11 +444,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       },
                       onAudioDelayChanged: _adjustAudioDelay,
                       onVolumeChanged: (value) {
-                        setState(() {
-                          _volume = value;
-                          _isMuted = false;
-                        });
-                        _player.setVolume(value);
+                        setState(() => _volumeBoost = value);
+                        _applyVolume();
                       },
                     ),
                   ),
@@ -611,17 +626,17 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     child: SliderTheme(
                       data: SliderThemeData(
                         trackHeight: 2,
-                        thumbShape:
-                            const RoundSliderThumbShape(enabledThumbRadius: 5),
-                        overlayShape:
-                            const RoundSliderOverlayShape(overlayRadius: 10),
+                        thumbShape: const RoundSliderThumbShape(
+                            enabledThumbRadius: 5),
+                        overlayShape: const RoundSliderOverlayShape(
+                            overlayRadius: 10),
                         activeTrackColor: Colors.white,
                         inactiveTrackColor: Colors.white24,
                         thumbColor: Colors.white,
                         overlayColor: Colors.white24,
                       ),
                       child: Slider(
-                        value: _isMuted ? 0 : _volume,
+                        value: (_isMuted ? 0.0 : _volume).clamp(0.0, 100.0),
                         min: 0,
                         max: 100,
                         onChanged: (value) {
@@ -629,7 +644,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                             _volume = value;
                             _isMuted = false;
                           });
-                          _player.setVolume(value);
+                          _applyVolume();
                         },
                       ),
                     ),
