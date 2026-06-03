@@ -47,6 +47,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   List<SubtitleTrack> _subtitleTracks = [];
   SubtitleTrack? _currentSubtitleTrack;
   double _volumeBoost = 100.0; // 100 = no boost, 200 = max boost
+  bool _isSeeking = false;
 
   Widget _controlButton(IconData icon, VoidCallback onTap,
       {double size = 22, Color color = Colors.white70}) {
@@ -61,11 +62,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _player = Player();
     _controller = VideoController(_player);
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+        (_player.platform as NativePlayer).setProperty('sub-margin-y', '10');
+      });
+
     _player.stream.playing.listen((playing) {
       setState(() => _isPlaying = playing);
     });
     _player.stream.position.listen((position) {
-      setState(() => _position = position);
+      if (!_isSeeking) setState(() => _position = position);
     });
     _player.stream.duration.listen((duration) {
       setState(() => _duration = duration);
@@ -94,9 +99,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   void _showControls() {
     setState(() => _controlsVisible = true);
+    (_player.platform as NativePlayer).setProperty('sub-margin-y', '80');
     _hideTimer?.cancel();
     _hideTimer = Timer(const Duration(seconds: 3), () {
-      if (_isPlaying) setState(() => _controlsVisible = false);
+      if (_isPlaying) {
+        setState(() => _controlsVisible = false);
+        (_player.platform as NativePlayer).setProperty('sub-margin-y', '10');
+      }
     });
   }
 
@@ -516,7 +525,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
             ),
             child: Row(
               children: [
-                const SizedBox(width: 80),
+                if (Theme.of(context).platform == TargetPlatform.macOS)
+                  const SizedBox(width: 80),
                 const Spacer(),
 
                 // Speed indicator
@@ -573,9 +583,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   max: _duration.inSeconds > 0
                       ? _duration.inSeconds.toDouble()
                       : 1,
+                  onChangeStart: (_) => setState(() => _isSeeking = true),
                   onChanged: (value) {
+                    setState(() => _position = Duration(seconds: value.toInt()));
                     _player.seek(Duration(seconds: value.toInt()));
                   },
+                  onChangeEnd: (_) => setState(() => _isSeeking = false),
                 ),
               ),
 
@@ -904,7 +917,7 @@ class _AnimatedPanelState extends State<_AnimatedPanel>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 250),
+      duration: const Duration(milliseconds: 150),
       value: widget.visible ? 1.0 : 0.0,
     );
     _slideAnim = Tween<Offset>(
