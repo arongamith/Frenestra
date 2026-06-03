@@ -48,6 +48,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
   SubtitleTrack? _currentSubtitleTrack;
   double _volumeBoost = 100.0; // 100 = no boost, 200 = max boost
   bool _isSeeking = false;
+  String _currentSubtitleText = '';
+  double _subtitleFontSize = 28.0;
+  Color _subtitleColor = Colors.white;
+  bool _subtitleBackground = true;
 
   Widget _controlButton(IconData icon, VoidCallback onTap,
       {double size = 22, Color color = Colors.white70}) {
@@ -63,8 +67,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _controller = VideoController(_player);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-        (_player.platform as NativePlayer).setProperty('sub-margin-y', '10');
-      });
+      (_player.platform as NativePlayer).setProperty('sub-margin-y', '10');
+      (_player.platform as NativePlayer).setProperty('sub-visibility', 'no');
+    });
 
     _player.stream.playing.listen((playing) {
       setState(() => _isPlaying = playing);
@@ -86,6 +91,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
         _currentAudioTrack = track.audio;
         _currentSubtitleTrack = track.subtitle;
       });
+    });
+    _player.stream.subtitle.listen((subtitle) {
+      setState(() => _currentSubtitleText = subtitle.first ?? '');
     });
   }
 
@@ -407,6 +415,48 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       ),
                     ),
                   ),
+                  // Custom subtitles
+                  if (_subtitlesEnabled && _currentSubtitleText.isNotEmpty)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: _controlsVisible ? 90 : 20,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: _subtitleBackground
+                                  ? Colors.black.withOpacity(0.6)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              _currentSubtitleText,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: _subtitleColor,
+                                fontSize: _subtitleFontSize,
+                                fontWeight: FontWeight.w500,
+                                shadows: _subtitleBackground
+                                    ? null
+                                    : [
+                                        const Shadow(
+                                            blurRadius: 4,
+                                            color: Colors.black,
+                                            offset: Offset(1, 1)),
+                                        const Shadow(
+                                            blurRadius: 4,
+                                            color: Colors.black,
+                                            offset: Offset(-1, -1)),
+                                      ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
 
                 // Controls overlay
                 AnimatedOpacity(
@@ -471,6 +521,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       setState(() => _volumeBoost = value);
                       _applyVolume();
                     },
+                    subtitleFontSize: _subtitleFontSize,
+                    subtitleColor: _subtitleColor,
+                    subtitleBackground: _subtitleBackground,
+                    onSubtitleFontSizeChanged: (v) => setState(() => _subtitleFontSize = v),
+                    onSubtitleColorChanged: (v) => setState(() => _subtitleColor = v),
+                    onSubtitleBackgroundChanged: (v) => setState(() => _subtitleBackground = v),
                   ),
                 ),
                 
@@ -714,10 +770,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
       ],
     );
   }
-
-  // Widget _windowButton(IconData icon, VoidCallback onTap) {
-  //   return _HoverButton(icon: icon, onTap: onTap);
-  // }
 }
 
 class _HoverButton extends StatefulWidget {

@@ -18,6 +18,12 @@ class SettingsPanel extends StatefulWidget {
   final List<SubtitleTrack> subtitleTracks;
   final SubtitleTrack? currentSubtitleTrack;
   final ValueChanged<SubtitleTrack> onSubtitleTrackChanged;
+  final double subtitleFontSize;
+  final Color subtitleColor;
+  final bool subtitleBackground;
+  final ValueChanged<double> onSubtitleFontSizeChanged;
+  final ValueChanged<Color> onSubtitleColorChanged;
+  final ValueChanged<bool> onSubtitleBackgroundChanged;
 
   const SettingsPanel({
     super.key,
@@ -37,6 +43,12 @@ class SettingsPanel extends StatefulWidget {
     required this.subtitleTracks,
     required this.currentSubtitleTrack,
     required this.onSubtitleTrackChanged,
+    required this.subtitleFontSize,
+    required this.subtitleColor,
+    required this.subtitleBackground,
+    required this.onSubtitleFontSizeChanged,
+    required this.onSubtitleColorChanged,
+    required this.onSubtitleBackgroundChanged,
   });
 
   @override
@@ -51,6 +63,29 @@ class _SettingsPanelState extends State<SettingsPanel> {
   late double _localAudioDelay;
   late double _localVolume;
   int _selectedTab = 0;
+  late double _localFontSize;
+
+  Widget _colorSwatch(Color color, Color selected, ValueChanged<Color> onTap) {
+    final isSelected = selected.value == color.value;
+    return GestureDetector(
+      onTap: () => onTap(color),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isSelected ? Colors.white : Colors.transparent,
+              width: 2,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -58,6 +93,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
     _localSubDelay = widget.subtitleDelay;
     _localAudioDelay = widget.audioDelay;
     _localVolume = widget.volume;
+    _localFontSize = widget.subtitleFontSize;
     _subDelayController =
         TextEditingController(text: _localSubDelay.toStringAsFixed(1));
     _audioDelayController =
@@ -86,6 +122,9 @@ class _SettingsPanelState extends State<SettingsPanel> {
         _localAudioDelay = widget.audioDelay;
         _audioDelayController.text = widget.audioDelay.toStringAsFixed(1);
       });
+    }
+    if (oldWidget.subtitleFontSize != widget.subtitleFontSize) {
+      setState(() => _localFontSize = widget.subtitleFontSize);
     }
   }
 
@@ -557,6 +596,108 @@ class _SettingsPanelState extends State<SettingsPanel> {
           ),
         ),
         const SizedBox(height: 24),
+        _sectionHeader('APPEARANCE'),
+        const SizedBox(height: 12),
+        
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Font size
+              Row(
+                children: [
+                  const Text('Font size',
+                      style: TextStyle(color: Colors.white60, fontSize: 13)),
+                  const Spacer(),
+                  _NumberInput(
+                    controller: TextEditingController(
+                        text: _localFontSize.toInt().toString()),
+                    suffix: 'px',
+                    onSubmitted: (v) {
+                      final parsed = double.tryParse(v);
+                      if (parsed != null) {
+                        setState(() => _localFontSize = parsed.clamp(12.0, 80.0));
+                        widget.onSubtitleFontSizeChanged(_localFontSize);
+                      }
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              SliderTheme(
+                data: SliderThemeData(
+                  trackHeight: 2,
+                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                  activeTrackColor: Colors.white,
+                  inactiveTrackColor: Colors.white24,
+                  thumbColor: Colors.white,
+                  overlayColor: Colors.white12,
+                ),
+                child: Slider(
+                  value: _localFontSize.clamp(12.0, 80.0),
+                  min: 12,
+                  max: 80,
+                  divisions: 68,
+                  onChanged: (v) {
+                    setState(() => _localFontSize = v);
+                    widget.onSubtitleFontSizeChanged(v);
+                  },
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: const [
+                  Text('12px', style: TextStyle(color: Colors.white24, fontSize: 10)),
+                  Text('46px', style: TextStyle(color: Colors.white24, fontSize: 10)),
+                  Text('80px', style: TextStyle(color: Colors.white24, fontSize: 10)),
+                ],
+              ),
+        
+              const SizedBox(height: 16),
+        
+              // Background toggle
+              Row(
+                children: [
+                  const Text('Background',
+                      style: TextStyle(color: Colors.white60, fontSize: 13)),
+                  const Spacer(),
+                  Switch(
+                    value: widget.subtitleBackground,
+                    onChanged: widget.onSubtitleBackgroundChanged,
+                    activeColor: Colors.white,
+                    activeTrackColor: Colors.white30,
+                    inactiveTrackColor: Colors.white12,
+                    inactiveThumbColor: Colors.white38,
+                  ),
+                ],
+              ),
+        
+              const SizedBox(height: 16),
+        
+              // Color picker
+              const Text('Color',
+                  style: TextStyle(color: Colors.white60, fontSize: 13)),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  _colorSwatch(Colors.white, widget.subtitleColor, widget.onSubtitleColorChanged),
+                  const SizedBox(width: 8),
+                  _colorSwatch(Colors.yellow, widget.subtitleColor, widget.onSubtitleColorChanged),
+                  const SizedBox(width: 8),
+                  _colorSwatch(Colors.amber, widget.subtitleColor, widget.onSubtitleColorChanged),
+                  const SizedBox(width: 8),
+                  _colorSwatch(Colors.cyanAccent, widget.subtitleColor, widget.onSubtitleColorChanged),
+                  const SizedBox(width: 8),
+                  _colorSwatch(Colors.greenAccent, widget.subtitleColor, widget.onSubtitleColorChanged),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
       ],
     );
   }
@@ -591,18 +732,7 @@ class _SettingsPanelState extends State<SettingsPanel> {
   }
 
   Widget _quickButton(String label, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.white10,
-          borderRadius: BorderRadius.circular(5),
-        ),
-        child: Text(label,
-            style: const TextStyle(color: Colors.white54, fontSize: 10)),
-      ),
-    );
+    return _HoverQuickButton(label: label, onTap: onTap);
   }
 }
 
@@ -754,6 +884,51 @@ class _NumberInput extends StatelessWidget {
                   const TextStyle(color: Colors.white38, fontSize: 11)),
           const SizedBox(width: 6),
         ],
+      ),
+    );
+  }
+}
+
+class _HoverQuickButton extends StatefulWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _HoverQuickButton({required this.label, required this.onTap});
+
+  @override
+  State<_HoverQuickButton> createState() => _HoverQuickButtonState();
+}
+
+class _HoverQuickButtonState extends State<_HoverQuickButton> {
+  bool _hovered = false;
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovered = true),
+        onExit: (_) => setState(() => _hovered = false),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+          decoration: BoxDecoration(
+            color: _pressed
+                ? Colors.white.withOpacity(0.2)
+                : _hovered
+                    ? Colors.white.withOpacity(0.15)
+                    : Colors.white10,
+            borderRadius: BorderRadius.circular(5),
+          ),
+          child: Text(widget.label,
+              style: TextStyle(
+                  color: _hovered ? Colors.white : Colors.white54,
+                  fontSize: 10)),
+        ),
       ),
     );
   }
