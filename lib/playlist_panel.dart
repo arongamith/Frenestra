@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 enum LoopMode { none, one, all }
 
-class PlaylistPanel extends StatefulWidget {
+class PlaylistPanel extends StatelessWidget {
   final List<String> playlist;
   final int currentIndex;
   final LoopMode loopMode;
@@ -28,44 +28,10 @@ class PlaylistPanel extends StatefulWidget {
     required this.onClose,
   });
 
-  @override
-  State<PlaylistPanel> createState() => _PlaylistPanelState();
-}
-
-class _PlaylistPanelState extends State<PlaylistPanel>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animController;
-  late Animation<Offset> _slideAnim;
-  late Animation<double> _fadeAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 250),
-    );
-    _slideAnim = Tween<Offset>(
-      begin: const Offset(1, 0),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animController,
-      curve: Curves.easeOutCubic,
-    ));
-    _fadeAnim = Tween<double>(begin: 0, end: 1).animate(_animController);
-    _animController.forward();
-  }
-
-  @override
-  void dispose() {
-    _animController.dispose();
-    super.dispose();
-  }
-
   String _fileName(String path) => path.split('/').last.split('\\').last;
 
   IconData get _loopIcon {
-    switch (widget.loopMode) {
+    switch (loopMode) {
       case LoopMode.none:
         return Icons.repeat;
       case LoopMode.one:
@@ -75,176 +41,143 @@ class _PlaylistPanelState extends State<PlaylistPanel>
     }
   }
 
-  // Color get _loopColor {
-  //   return widget.loopMode == LoopMode.none ? Colors.white30 : Colors.white;
-  // }
-
   void _cycleLoopMode() {
-    switch (widget.loopMode) {
+    switch (loopMode) {
       case LoopMode.none:
-        widget.onLoopModeChanged(LoopMode.all);
+        onLoopModeChanged(LoopMode.all);
         break;
       case LoopMode.all:
-        widget.onLoopModeChanged(LoopMode.one);
+        onLoopModeChanged(LoopMode.one);
         break;
       case LoopMode.one:
-        widget.onLoopModeChanged(LoopMode.none);
+        onLoopModeChanged(LoopMode.none);
         break;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fadeAnim,
-      child: SlideTransition(
-        position: _slideAnim,
-        child: Align(
-          alignment: Alignment.centerRight,
-          child: Container(
-            width: 300,
-            height: double.infinity,
-            decoration: BoxDecoration(
-              color: const Color(0xE6141414),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                bottomLeft: Radius.circular(12),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.5),
-                  blurRadius: 24,
-                  offset: const Offset(-4, 0),
-                ),
-              ],
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Container(
+        width: 300,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          color: const Color(0xE6141414),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(12),
+            bottomLeft: Radius.circular(12),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.5),
+              blurRadius: 24,
+              offset: const Offset(-4, 0),
             ),
-            child: Column(
-              children: [
-                const SizedBox(height: 52),
+          ],
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 52),
 
-                // Header
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  child: Row(
-                    children: [
-                      const Text(
-                        'Playlist',
-                        style: TextStyle(
+            // Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Row(
+                children: [
+                  const Text('Playlist',
+                      style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          letterSpacing: -0.3,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.white12,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          '${widget.playlist.length}',
-                          style: const TextStyle(
-                              color: Colors.white54,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: widget.onClose,
-                        child: const Icon(Icons.close,
-                            color: Colors.white38, size: 18),
-                      ),
-                    ],
+                          letterSpacing: -0.3)),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                        color: Colors.white12,
+                        borderRadius: BorderRadius.circular(10)),
+                    child: Text('${playlist.length}',
+                        style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500)),
                   ),
-                ),
-
-                // Controls row
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      // Add files
-                      _PanelButton(
-                        icon: Icons.add,
-                        label: 'Add',
-                        onTap: widget.onAddFiles,
-                      ),
-                      const Spacer(),
-
-                      // Shuffle
-                      _IconToggle(
-                        icon: Icons.shuffle,
-                        active: widget.shuffle,
-                        onTap: () =>
-                            widget.onShuffleChanged(!widget.shuffle),
-                      ),
-                      const SizedBox(width: 8),
-
-                      // Loop
-                      _IconToggle(
-                        icon: _loopIcon,
-                        active: widget.loopMode != LoopMode.none,
-                        onTap: _cycleLoopMode,
-                        label: widget.loopMode == LoopMode.one ? '1' : null,
-                      ),
-                    ],
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: onClose,
+                    child: const Icon(Icons.close,
+                        color: Colors.white38, size: 18),
                   ),
-                ),
-
-                Container(height: 1, color: Colors.white10),
-
-                // Playlist items
-                Expanded(
-                  child: widget.playlist.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.queue_music,
-                                  color: Colors.white12, size: 48),
-                              const SizedBox(height: 12),
-                              const Text(
-                                'No items in playlist',
-                                style: TextStyle(
-                                    color: Colors.white24, fontSize: 13),
-                              ),
-                              const SizedBox(height: 16),
-                              _PanelButton(
-                                icon: Icons.add,
-                                label: 'Add files',
-                                onTap: widget.onAddFiles,
-                              ),
-                            ],
-                          ),
-                        )
-                      : ReorderableListView.builder(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          itemCount: widget.playlist.length,
-                          onReorder: (oldIndex, newIndex) {
-                            // reorder handled in parent
-                          },
-                          itemBuilder: (context, index) {
-                            final isCurrent = index == widget.currentIndex;
-                            return _PlaylistItem(
-                              key: ValueKey(widget.playlist[index]),
-                              index: index,
-                              name: _fileName(widget.playlist[index]),
-                              isCurrent: isCurrent,
-                              onTap: () => widget.onPlayItem(index),
-                              onRemove: () => widget.onRemoveItem(index),
-                            );
-                          },
-                        ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+
+            // Controls row
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  _PanelButton(icon: Icons.add, label: 'Add', onTap: onAddFiles),
+                  const Spacer(),
+                  _IconToggle(
+                    icon: Icons.shuffle,
+                    active: shuffle,
+                    onTap: () => onShuffleChanged(!shuffle),
+                  ),
+                  const SizedBox(width: 8),
+                  _IconToggle(
+                    icon: _loopIcon,
+                    active: loopMode != LoopMode.none,
+                    onTap: _cycleLoopMode,
+                    label: loopMode == LoopMode.one ? '1' : null,
+                  ),
+                ],
+              ),
+            ),
+
+            Container(height: 1, color: Colors.white10),
+
+            // Playlist items
+            Expanded(
+              child: playlist.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.queue_music,
+                              color: Colors.white12, size: 48),
+                          const SizedBox(height: 12),
+                          const Text('No items in playlist',
+                              style: TextStyle(
+                                  color: Colors.white24, fontSize: 13)),
+                          const SizedBox(height: 16),
+                          _PanelButton(
+                              icon: Icons.add,
+                              label: 'Add files',
+                              onTap: onAddFiles),
+                        ],
+                      ),
+                    )
+                  : ReorderableListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: playlist.length,
+                      onReorder: (oldIndex, newIndex) {},
+                      itemBuilder: (context, index) {
+                        final isCurrent = index == currentIndex;
+                        return _PlaylistItem(
+                          key: ValueKey(playlist[index]),
+                          index: index,
+                          name: _fileName(playlist[index]),
+                          isCurrent: isCurrent,
+                          onTap: () => onPlayItem(index),
+                          onRemove: () => onRemoveItem(index),
+                        );
+                      },
+                    ),
+            ),
+          ],
         ),
       ),
     );
@@ -295,29 +228,22 @@ class _PlaylistItemState extends State<_PlaylistItem> {
           margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           child: Row(
             children: [
-              // Index or playing indicator
               SizedBox(
                 width: 20,
                 child: widget.isCurrent
-                    ? const Icon(Icons.equalizer,
-                        color: Colors.white, size: 14)
-                    : Text(
-                        '${widget.index + 1}',
+                    ? const Icon(Icons.equalizer, color: Colors.white, size: 14)
+                    : Text('${widget.index + 1}',
                         style: const TextStyle(
                             color: Colors.white24,
                             fontSize: 11,
-                            fontWeight: FontWeight.w500),
-                      ),
+                            fontWeight: FontWeight.w500)),
               ),
               const SizedBox(width: 10),
-
-              // File name
               Expanded(
                 child: Text(
                   widget.name,
                   style: TextStyle(
-                    color:
-                        widget.isCurrent ? Colors.white : Colors.white70,
+                    color: widget.isCurrent ? Colors.white : Colors.white70,
                     fontSize: 13,
                     fontWeight: widget.isCurrent
                         ? FontWeight.w500
@@ -327,8 +253,6 @@ class _PlaylistItemState extends State<_PlaylistItem> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-
-              // Remove button
               if (_hovered)
                 GestureDetector(
                   onTap: widget.onRemove,
@@ -375,8 +299,7 @@ class _PanelButtonState extends State<_PanelButton> {
         onExit: (_) => setState(() => _hovered = false),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          padding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
             color: _pressed
                 ? Colors.white.withOpacity(0.16)
@@ -388,8 +311,7 @@ class _PanelButtonState extends State<_PanelButton> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(widget.icon,
-                  color: Colors.white70, size: 14),
+              Icon(widget.icon, color: Colors.white70, size: 14),
               const SizedBox(width: 5),
               Text(widget.label,
                   style: const TextStyle(
@@ -457,13 +379,11 @@ class _IconToggleState extends State<_IconToggle> {
                       color: Colors.white,
                       shape: BoxShape.circle,
                     ),
-                    child: Text(
-                      widget.label!,
-                      style: const TextStyle(
-                          color: Colors.black,
-                          fontSize: 7,
-                          fontWeight: FontWeight.w800),
-                    ),
+                    child: Text(widget.label!,
+                        style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 7,
+                            fontWeight: FontWeight.w800)),
                   ),
                 ),
             ],

@@ -406,72 +406,90 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   child: _buildControls(),
                 ),
                 
-                // Settings panel
-                if (_settingsPanelOpen)
+                // Backdrop — click outside to close
+                if (_settingsPanelOpen || _playlistOpen)
                   Positioned.fill(
-                    child: SettingsPanel(
-                      subtitleDelay: _subtitleDelay,
-                      subtitlesEnabled: _subtitlesEnabled,
-                      onClose: () => setState(() => _settingsPanelOpen = false),
-                      onLoadSubtitle: () {
-                        _loadSubtitle();
-                        setState(() => _settingsPanelOpen = false);
-                      },
-                      subtitleTracks: _subtitleTracks,
-                      currentSubtitleTrack: _currentSubtitleTrack,
-                      onSubtitleTrackChanged: (track) {
-                        _player.setSubtitleTrack(track);
-                        setState(() => _currentSubtitleTrack = track);
-                      },
-                      onSubtitleDelayChanged: _adjustSubtitleDelay,
-                      onSubtitlesToggled: (value) {
-                        setState(() => _subtitlesEnabled = value);
-                        if (value) {
-                          _player.setSubtitleTrack(_player.state.tracks.subtitle.isNotEmpty
-                              ? _player.state.tracks.subtitle.first
-                              : SubtitleTrack.no());
-                        } else {
-                          _player.setSubtitleTrack(SubtitleTrack.no());
-                        }
-                      },
-                      audioDelay: _audioDelay,
-                      volume: _volumeBoost,
-                      audioTracks: _audioTracks,
-                      currentAudioTrack: _currentAudioTrack,
-                      onAudioTrackChanged: (track) {
-                        _player.setAudioTrack(track);
-                        setState(() => _currentAudioTrack = track);
-                      },
-                      onAudioDelayChanged: _adjustAudioDelay,
-                      onVolumeChanged: (value) {
-                        setState(() => _volumeBoost = value);
-                        _applyVolume();
-                      },
+                    child: GestureDetector(
+                      onTap: () => setState(() {
+                        _settingsPanelOpen = false;
+                        _playlistOpen = false;
+                      }),
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(color: Colors.transparent),
                     ),
                   ),
-                  // Playlist panel
-                  if (_playlistOpen)
-                    Positioned.fill(
-                      child: PlaylistPanel(
-                        playlist: _playlist,
-                        currentIndex: _currentIndex,
-                        loopMode: _loopMode,
-                        shuffle: _shuffle,
-                        onClose: () => setState(() => _playlistOpen = false),
-                        onAddFiles: _openFile,
-                        onPlayItem: _playIndex,
-                        onRemoveItem: (index) {
-                          setState(() {
-                            _playlist.removeAt(index);
-                            if (_currentIndex >= _playlist.length) {
-                              _currentIndex = _playlist.length - 1;
-                            }
-                          });
-                        },
-                        onLoopModeChanged: (mode) => setState(() => _loopMode = mode),
-                        onShuffleChanged: (val) => setState(() => _shuffle = val),
-                      ),
-                    ),
+                
+                // Settings panel
+                _AnimatedPanel(
+                  visible: _settingsPanelOpen,
+                  alignment: Alignment.centerLeft,
+                  slideBegin: const Offset(-1, 0),
+                  child: SettingsPanel(
+                    subtitleDelay: _subtitleDelay,
+                    subtitlesEnabled: _subtitlesEnabled,
+                    onClose: () => setState(() => _settingsPanelOpen = false),
+                    onLoadSubtitle: () {
+                      _loadSubtitle();
+                      setState(() => _settingsPanelOpen = false);
+                    },
+                    subtitleTracks: _subtitleTracks,
+                    currentSubtitleTrack: _currentSubtitleTrack,
+                    onSubtitleTrackChanged: (track) {
+                      _player.setSubtitleTrack(track);
+                      setState(() => _currentSubtitleTrack = track);
+                    },
+                    onSubtitleDelayChanged: _adjustSubtitleDelay,
+                    onSubtitlesToggled: (value) {
+                      setState(() => _subtitlesEnabled = value);
+                      if (value) {
+                        _player.setSubtitleTrack(_player.state.tracks.subtitle.isNotEmpty
+                            ? _player.state.tracks.subtitle.first
+                            : SubtitleTrack.no());
+                      } else {
+                        _player.setSubtitleTrack(SubtitleTrack.no());
+                      }
+                    },
+                    audioDelay: _audioDelay,
+                    volume: _volumeBoost,
+                    audioTracks: _audioTracks,
+                    currentAudioTrack: _currentAudioTrack,
+                    onAudioTrackChanged: (track) {
+                      _player.setAudioTrack(track);
+                      setState(() => _currentAudioTrack = track);
+                    },
+                    onAudioDelayChanged: _adjustAudioDelay,
+                    onVolumeChanged: (value) {
+                      setState(() => _volumeBoost = value);
+                      _applyVolume();
+                    },
+                  ),
+                ),
+                
+                // Playlist panel
+                _AnimatedPanel(
+                  visible: _playlistOpen,
+                  alignment: Alignment.centerRight,
+                  slideBegin: const Offset(1, 0),
+                  child: PlaylistPanel(
+                    playlist: _playlist,
+                    currentIndex: _currentIndex,
+                    loopMode: _loopMode,
+                    shuffle: _shuffle,
+                    onClose: () => setState(() => _playlistOpen = false),
+                    onAddFiles: _openFile,
+                    onPlayItem: _playIndex,
+                    onRemoveItem: (index) {
+                      setState(() {
+                        _playlist.removeAt(index);
+                        if (_currentIndex >= _playlist.length) {
+                          _currentIndex = _playlist.length - 1;
+                        }
+                      });
+                    },
+                    onLoopModeChanged: (mode) => setState(() => _loopMode = mode),
+                    onShuffleChanged: (val) => setState(() => _shuffle = val),
+                  ),
+                ),
               ],
             ),
           ),
@@ -854,6 +872,85 @@ class _SpeedButtonState extends State<_SpeedButton> {
                 ))
             .toList(),
       ),
+    );
+  }
+}
+
+class _AnimatedPanel extends StatefulWidget {
+  final bool visible;
+  final Alignment alignment;
+  final Offset slideBegin;
+  final Widget child;
+
+  const _AnimatedPanel({
+    required this.visible,
+    required this.alignment,
+    required this.slideBegin,
+    required this.child,
+  });
+
+  @override
+  State<_AnimatedPanel> createState() => _AnimatedPanelState();
+}
+
+class _AnimatedPanelState extends State<_AnimatedPanel>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _slideAnim;
+  late Animation<double> _fadeAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+      value: widget.visible ? 1.0 : 0.0,
+    );
+    _slideAnim = Tween<Offset>(
+      begin: widget.slideBegin,
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+        parent: _controller, curve: Curves.easeOutCubic));
+    _fadeAnim = Tween<double>(begin: 0, end: 1).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.visible != oldWidget.visible) {
+      if (widget.visible) {
+        _controller.forward();
+      } else {
+        _controller.reverse();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        if (_controller.value == 0.0) return const SizedBox.shrink();
+        return Positioned.fill(
+          child: FadeTransition(
+            opacity: _fadeAnim,
+            child: SlideTransition(
+              position: _slideAnim,
+              child: child,
+            ),
+          ),
+        );
+      },
+      child: widget.child,
     );
   }
 }
